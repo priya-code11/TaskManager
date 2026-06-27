@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      String   @default("todo")
+  priority    String   @default("medium")
+  dueDate     DateTime
+  createdAt   DateTime @default(now())
+
+  // If your database table is literally named "tasks" plural, 
+  // you must map it like this:
+  @@map("tasks") 
+}
