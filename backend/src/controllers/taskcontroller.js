@@ -1,4 +1,4 @@
-import dotenv from 'dotenv'; // 👈 Change this line!
+import dotenv from 'dotenv'; 
 dotenv.config({ path: './backend/.env' });
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
