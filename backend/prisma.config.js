@@ -1,5 +1,5 @@
 // backend/prisma.config.js
-import 'dotenv/config'; // 👈 This line loads your .env variables before anything else runs!
+import 'dotenv/config'; 
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({

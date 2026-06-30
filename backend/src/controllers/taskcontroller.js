@@ -1,29 +1,23 @@
-import dotenv from 'dotenv'; // 👈 Change this line!
-dotenv.config({ path: './backend/.env' });
-import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
-
-const pool = new pg.Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  options: '-c search_path=taskDB'
- });
-
-const adapter = new PrismaPg(pool, { schema: 'taskDB' });
-
-
-const prisma = new PrismaClient({ adapter });
-
+import { prisma } from '../config/prisma.js';
 
 export const getAllTasks = async (req, res) => {
   try {
+    // 1. Ensure the user is authenticated and their ID exists
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+    }
+
     const { status, priority } = req.query;
     
-    // Build dynamic filter conditions for Prisma
-    const whereCondition = {};
+    // 2. Build dynamic filter conditions and force-bind the userId
+    const whereCondition = {
+      userId: req.user.id // Only match tasks belonging to this user
+    };
+    
     if (status) whereCondition.status = status;
     if (priority) whereCondition.priority = priority;
 
+    // 3. Query Prisma with the bound user isolation filter
     const tasks = await prisma.task.findMany({
       where: whereCondition,
       orderBy: { createdAt: 'desc' }, // Show newest tasks first
@@ -39,7 +33,7 @@ export const getAllTasks = async (req, res) => {
 
 export const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate } = req.body;
+    const { title, description, status, priority, dueDate ,reminderMin } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({ error: 'Title is a required field.' });
@@ -51,10 +45,12 @@ export const createTask = async (req, res) => {
     const newTask = await prisma.task.create({
       data: {
         title,
-        description: description || '',
-        status: status || 'todo',
-        priority: priority || 'medium',
-        dueDate: new Date(dueDate), // Parses 'YYYY-MM-DD' string to standard Date object
+        description,
+        priority,
+        status: status || "todo",
+        dueDate: new Date(dueDate), // Ensure string is parsed back to a Date object
+        userId: req.user.id,        // Inject the authenticated user ID safely
+        reminderMin: reminderMin || 5
       },
     });
 
@@ -69,7 +65,7 @@ export const createTask = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, status, priority, dueDate } = req.body;
+    const { title, description, status, priority, dueDate , reminderMin } = req.body;
 
     // Check if task exists first
     const existingTask = await prisma.task.findUnique({ where: { id } });
@@ -83,6 +79,7 @@ export const updateTask = async (req, res) => {
     if (status !== undefined) updateData.status = status;
     if (priority !== undefined) updateData.priority = priority;
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
+    if (reminderMin !== undefined) updateData.reminderMin = parseInt(reminderMin);
 
     const updatedTask = await prisma.task.update({
       where: { id },

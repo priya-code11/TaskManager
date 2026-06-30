@@ -4,29 +4,53 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["taskDB"]
 }
 
 enum Status {
   todo
   in_progress
   completed
+  missed
+
+  @@schema("taskDB")
 }
 
 enum Priority {
   low
   medium
   high
+
+  @@schema("taskDB")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  fullName  String?
+  password  String
+  tasks     Task[] // One-to-many relationship: A user has many tasks
+  createdAt DateTime @default(now())
+
+  @@map("users")
+  @@schema("taskDB")
 }
 
 model Task {
   id          String   @id @default(uuid())
   title       String
-  description String
-  status      Status   
-  priority    Priority   
+  description String?
+  status      Status   @default(todo)
+  priority    String
+  reminderMin Int      @default(0)
   dueDate     DateTime
-  createdAt   DateTime @default(now())
 
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("tasks") 
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("tasks")
+  @@schema("taskDB")
 }
